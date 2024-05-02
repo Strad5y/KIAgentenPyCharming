@@ -32,13 +32,22 @@
 
 <!-- PDF-Upload-Button -->
 <div class="upload-btn-wrapper">
-  <button class="btn">Upload a file</button>
   <input type="file" name="myfile" />
 
+  <!-- .json-Download-Button -->
+  <button id="download" onclick="downloadJson()">Download JSON</button>
 
 
+<!-- Dropdown-Button für die Auswahl der Chat-GPT-Version -->
+<div class="dropdown">
+  <button class="dropbtn">Chat-GPT Version auswaehlen</button>
+  <div class="dropdown-content">
+    <a href="#">3.5</a>
+    <a href="#">4.0</a>
+  </div>
 
 
+/
 
 <!-- Styles für die Chat-UI -->
 <style>
@@ -58,10 +67,7 @@
           max-height: 200px; /* Begrenzt das Wachstum auf die Höhe von etwa 6-8 Zeilen */
           overflow: auto;
           flex-direction: column; /* Stack the elements vertically */
-        }
-
-
-
+          }
 
 
         /* Stil für das Eingabefeld */
@@ -134,6 +140,9 @@
 
 
           }
+
+            
+
 
 
 

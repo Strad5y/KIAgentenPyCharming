@@ -1,6 +1,16 @@
 import fitz
 import json
-def
+def open_pdf_button(pdf_path):
+    text = pdf_ocr(pdf_path)
+    json_file_path = "Json Files/myfile.json"
+    save_text_as_json(text, json_file_path)
+    # Example print to check if it works
+    with open('Json Files/myfile.json', 'r') as file:
+        data = json.load(file)
+
+    print(json.dumps(data, indent=4))
+
+
 def pdf_ocr(pdf_path):
     # Open the PDF
     pdf_document = fitz.open(pdf_path)
@@ -31,6 +41,5 @@ def save_text_as_json(text, json_file_path):
 
 
 # Example usage
-pdf_path = "C:\\Users\\Timo\\Downloads\\08_Ampel.pdf"
-extracted_text = pdf_ocr(pdf_path)
-print(extracted_text)
+pdf_path = "PDF Example Files/Estimation of the Gross Fixed Kapital using linear Regression.pdf"
+open_pdf_button(pdf_path)

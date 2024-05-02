@@ -1,6 +1,6 @@
 import fitz
-
-
+import json
+def
 def pdf_ocr(pdf_path):
     # Open the PDF
     pdf_document = fitz.open(pdf_path)
@@ -20,6 +20,14 @@ def pdf_ocr(pdf_path):
     pdf_document.close()
 
     return text
+
+def save_text_as_json(text, json_file_path):
+    # Create a dictionary to store the text
+    data = {'text': text}
+
+    # Write the dictionary to a JSON file
+    with open(json_file_path, 'w') as json_file:
+        json.dump(data, json_file)
 
 
 # Example usage

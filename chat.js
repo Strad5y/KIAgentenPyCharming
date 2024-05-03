@@ -57,6 +57,18 @@ function displayMessage(text, type) {
   messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to the newest message element
 }
 
+document.getElementById('downloadButton').addEventListener('click', function() {
+    const data = {"key": "value"}; // Replace this with your actual data
+    const jsonStr = JSON.stringify(data);
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(jsonStr));
+    element.setAttribute('download', 'data.json');
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+});
+
 
 
 

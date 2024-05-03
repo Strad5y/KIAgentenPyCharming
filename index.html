@@ -48,7 +48,7 @@
           display: flex;
           border-top: 1px solid #2F6AA0;
           position: relative;
-          padding-top: 15px; /* Erhöht den Abstand zwischen der Trennlinie und dem Eingabefeld */
+          padding-top: 2px; /* Erhöht den Abstand zwischen der Trennlinie und dem Eingabefeld */
           max-height: 200px; /* Begrenzt das Wachstum auf die Höhe von etwa 6-8 Zeilen */
           overflow: auto;
           flex-direction: column; /* Stack the elements vertically */
@@ -147,6 +147,15 @@
         text-align: left;
         margin-left: 10px; /* Abstand zum Profilbild */
         }
+       .dropbtn {
+        color: white;
+        background-color: #2F6AA0;border: none;
+        border-radius: 8px;
+        padding: 5px 15px;
+        font-size: 1em;
+        cursor: pointer;
+        text-decoration: none;
+}
 
         /* Stil für das Profilbild */
         .profile-pic {
@@ -163,7 +172,15 @@
 }
 
 #downloadButton {
-  margin-right: 10px; /* Adjust this value to increase or decrease the space between the buttons */
+  background-color: #2F6AA0; /* Blue background */
+  color: white; /* White text */
+  border: none; /* Remove default border */
+  border-radius: 8px; /* Rounded edges */
+  padding: 10px 15px; /* Padding around the text */
+  font-size: 1em; /* Adjust text size as needed */
+  cursor: pointer; /* Change cursor to pointer when hovering over the button */
+  text-decoration: none; /* Remove underline */
+  margin-right: 10px; /* Space to the next button */
 }
 
         #chat-input:focus {

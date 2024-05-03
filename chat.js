@@ -73,6 +73,7 @@ document.getElementById('downloadButton').addEventListener('click', function() {
 
 
 
+
 // sendMessage-Funktion, die Typewriter-Effekt für ausgehende Nachrichten verwendet
 function sendMessage() {
   

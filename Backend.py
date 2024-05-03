@@ -12,7 +12,7 @@ def index():
 # WebSocket-Event-Handler für den Chat
 @socketio.on('message')
 def handle_message(msg):
-    # Echo-Nachricht zurücksenden
+    # Echo-Nachricht zurücksendend
     emit('message', msg)
 
 if __name__ == '__main__':

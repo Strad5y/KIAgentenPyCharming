@@ -27,7 +27,10 @@ function typeMessage(fullText, type) {
   }
 }
 
-  
+
+
+
+
 function displayMessage(text, type) {
   var messagesContainer = document.getElementById('chat-messages');
   var messageDiv = document.createElement('div');

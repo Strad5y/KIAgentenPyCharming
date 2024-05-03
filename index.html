@@ -1,50 +1,36 @@
 <!-- chat-ui.liquid -->
-<div
-  id="chat-container"
-  data-profile-pic-url="images/Chat-bot-profilbild.jpg"
->
-  <!-- Header improved with a better visual hierarchy -->
-  <div id="chat-header">
-    <img
-      src="images/Chat-bot-profilbild.jpg"
-      class="profile-pic"
-      alt="Chat-bot"
-    >
-    <span id="chat-title">Hallo ich bin ein Chatbot! </span>
+<div id="parent-container">
+  <div id="chat-container" data-profile-pic-url="images/Chat-bot-profilbild.jpg">
+    <div id="chat-header">
+      <img src="images/Chat-bot-profilbild.jpg" class="profile-pic" alt="Chat-bot">
+      <span id="chat-title">Hallo ich bin ein Chatbot! </span>
+    </div>
+    <div id="chat-messages" role="log" aria-live="polite">
+      <!-- Nachrichten werden hier über JavaScript eingefügt -->
+    </div>
+    <div id="chat-input-container">
+      <textarea id="chat-input" aria-label="Schreiben Sie eine Nachricht" placeholder="Schreiben Sie eine Nachricht..." onkeypress="checkForEnter(event)"></textarea>
+      <button id="chat-send" aria-label="Nachricht senden" onclick="sendMessage()">
+        <span class="send-icon">➤</span>
+      </button>
+    </div>
   </div>
-  <div id="chat-messages" role="log" aria-live="polite">
-    <!-- Nachrichten werden hier über JavaScript eingefügt -->
-  </div>
-  <!-- Input container improved for better usability -->
-  <div id="chat-input-container">
-    <textarea
-      id="chat-input"
-      aria-label="Schreiben Sie eine Nachricht"
-      placeholder="Schreiben Sie eine Nachricht..."
-      onkeypress="checkForEnter(event)"
-    ></textarea>
-    <button id="chat-send" aria-label="Nachricht senden" onclick="sendMessage()">
-      <span class="send-icon">➤</span>
-      <!-- Added span for better control over the icon -->
-    </button>
+  <div id="new-box">
+    <!-- Content of the new box goes here -->
+    <div class="upload-btn-wrapper">
+      <input type="file" name="myfile" />
+    </div>
   </div>
 </div>
 
-<!-- PDF-Upload-Button -->
-<div class="upload-btn-wrapper">
-  <input type="file" name="myfile" />
-
-  <!-- .json-Download-Button -->
-  <button id="download" onclick="downloadJson()">Download JSON</button>
-
-
-<!-- Dropdown-Button für die Auswahl der Chat-GPT-Version -->
 <div class="dropdown">
   <button class="dropbtn">Chat-GPT Version auswaehlen</button>
   <div class="dropdown-content">
     <a href="#">3.5</a>
     <a href="#">4.0</a>
   </div>
+</div>
+
 
 
 /
@@ -277,6 +263,29 @@
         .message-text {
         flex-grow: 1; /* Lässt den Text den verfügbaren Raum ausfüllen */
         }
+        #parent-container {
+    display: flex;
+  }
+
+  #new-box {
+    /* Adjust the width, height, and other styles as needed */
+    width: 50%; /* This will make the new box take up half of the parent container's width */
+    height: 100vh; /* This will make the new box take up the full height of the viewport */
+    background-color: #f5f5f5;
+    display: flex; /* Added */
+    justify-content: center; /* Added */
+    align-items: center; /* Added */
+  }
+
+  #chat-container {
+    width: 50%; /* This will make the chat container take up half of the parent container's width */
+  }
+
+  .upload-btn-wrapper {
+    display: flex; /* Added */
+    justify-content: center; /* Added */
+    align-items: center; /* Added */
+  }
 </style>
 
 <!-- JavaScript -->

@@ -9,7 +9,7 @@ function typeMessage(fullText, type) {
     const profilePicUrl = document.getElementById('chat-container').getAttribute('data-profile-pic-url');
     messageDiv.innerHTML = `
       <img src="${profilePicUrl}" class="profile-pic">
-      <span class="sender-name">Chat-bot</span>
+      <span class="sender-name">FunkBot</span>
     `;
     const textSpan = document.createElement('span');
     textSpan.classList.add('message-text');
@@ -40,12 +40,12 @@ function displayMessage(text, type) {
     const profilePicUrl = document.getElementById('chat-container').getAttribute('data-profile-pic-url');
     messageDiv.innerHTML = `
       <img src="${profilePicUrl}" class="profile-pic">
-      <span class="sender-name">Chat-bot</span>
+      <span class="sender-name">FunkBot</span>
       <span class="message-text">${text}</span>
     `;
   } else {
     // Add user profile picture and name for outgoing messages
-    const userPicUrl = "images/User_1.png"; 
+    const userPicUrl = "static/images/User_1.png"; 
     messageDiv.innerHTML = `
       <img src="${userPicUrl}" class="profile-pic">
       <span class="sender-name">Du</span>

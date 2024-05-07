@@ -8,7 +8,7 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 # Geheimnis f�r GitHub Webhook
-GITHUB_SECRET = b"your-webhook-secret"
+GITHUB_SECRET = b"mnjrmfkensnfjrvhr" #Diesen secret habe ich in Github repo erstellt
 
 @app.route('/')
 def index():
@@ -33,7 +33,7 @@ def webhook():
         abort(400)
 
     # Git-Pull ausf�hren
-    subprocess.Popen(['git', '-C', '/path/to/repo', 'pull'])
+    subprocess.Popen(['git', '-C', '/home/jonne/Programme/KIAgentenPyCharming', 'pull'])
     return '', 204
 
 if __name__ == '__main__':

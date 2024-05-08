@@ -8,7 +8,7 @@ dist/
 .env
 
 #Webhook for the Raspberry Pi 
-/home/jonne/Programme/KIAgentenPyCharming/webhook.py
+webhook.py
 
 # IDE-specific files
 .vscode/

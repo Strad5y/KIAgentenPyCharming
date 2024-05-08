@@ -7,6 +7,9 @@ dist/
 # Environment variables
 .env
 
+#Webhook for the Raspberry Pi 
+/home/jonne/Programme/KIAgentenPyCharming/webhook_listener.py
+
 # IDE-specific files
 .vscode/
 .idea/

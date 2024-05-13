@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
-  const socket = io.connect('https://kiagentenpycharming.cloud:5000');
+  const socket = io.connect('https://kiagentenpycharming.cloud/');
 
   const messageContainer = document.getElementById('chat-messages');
   const inputElement = document.getElementById('chat-input');

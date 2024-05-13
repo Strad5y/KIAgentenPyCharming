@@ -1,58 +1,61 @@
-<!-- chat-UI -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
 <div id="parent-container">
-  <div id="chat-container" data-profile-pic-url="static/images/Chat-bot-profilbild.jpg">
-    <div id="chat-header">
-      <img src="static/images/Chat-bot-profilbild.jpg" class="profile-pic" alt="Chat-bot">
-      <span id="chat-title">Hallo ich bin ein Chatbot! </span>
+    <div id="chat-container">
+        <div id="chat-header">
+            <img src="static/images/Chat-bot-profilbild.jpg" class="profile-pic" alt="Chat-bot">
+            <span id="chat-title">Hallo, ich bin ein Chatbot!</span>
+        </div>
+        <div id="chat-messages" role="log" aria-live="polite"></div>
+        <div id="chat-input-container">
+            <textarea id="chat-input" aria-label="Schreiben Sie eine Nachricht"
+                      placeholder="Schreiben Sie eine Nachricht..."></textarea>
+            <button id="chat-send">
+                <span class="send-icon">➤</span>
+            </button>
+        </div>
     </div>
-    <div id="chat-messages" role="log" aria-live="polite">
-      <!-- Nachrichten werden hier über JavaScript eingefügt -->
+    <div id="new-box">
+        <div class="upload-btn-wrapper">
+            <label for="myfile">Choose a file:</label>
+            <input type="file" id="myfile" name="myfile"/>
+        </div>
     </div>
-    <div id="chat-input-container">
-      <textarea id="chat-input" aria-label="Schreiben Sie eine Nachricht" placeholder="Schreiben Sie eine Nachricht..." onkeypress="checkForEnter(event)"></textarea>
-      <button id="chat-send" aria-label="Nachricht senden" onclick="sendMessage()">
-        <span class="send-icon">➤</span>
-      </button>
-    </div>
-  </div>
-  <div id="new-box">
-    <!-- Content of the new box goes here -->
-    <div class="upload-btn-wrapper">
-      <input type="file" name="myfile" />
-    </div>
-  </div>
 </div>
 
 <div class="button-container">
-  <button id="downloadButton">Download JSON</button>
-  <div class="dropdown">
-    <button class="dropbtn">Chat-GPT Version auswaehlen</button>
-    <div class="dropdown-content">
-      <a href="#">3.5</a>
-      <a href="#">4.0</a>
+    <button id="downloadButton">Download JSON</button>
+    <div class="dropdown">
+        <button class="dropbtn">Chat-GPT Version auswählen</button>
+        <div class="dropdown-content">
+            <a href="#">3.5</a>
+            <a href="#">4.0</a>
+        </div>
     </div>
-  </div>
 </div>
-
-<!-- Styles für die Chat-UI -->
-<style type="text/css">
-  @import url("static/css/style.css");
-</style>
 
 <!-- JavaScript -->
 <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 <script src="static/js/chat.js"></script>
-
 <script>
-  document.getElementById('downloadButton').addEventListener('click', function() {
-    const data = {"key": "value"}; // Replace this with your actual data
-    const jsonStr = JSON.stringify(data);
-    const element = document.createElement('a');
-    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(jsonStr));
-    element.setAttribute('download', 'data.json');
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  });
+    document.getElementById('downloadButton').addEventListener('click', function () {
+        const data = {"key": "value"}; // Ersetze dies durch deine tatsächlichen Daten
+        const jsonStr = JSON.stringify(data);
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(jsonStr));
+        element.setAttribute('download', 'data.json');
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    });
 </script>
+</body>
+</html>

@@ -1,16 +1,22 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@socketio.on('connect')
+def test_connect():
+    emit('message', 'Connected successfully!')
+
 @socketio.on('message')
 def handle_message(msg):
-    # Echos die erhaltene Nachricht zur�ck an den Absender
+    # Echos die erhaltene Nachricht zurueck an den Absender
     emit('message', f'Echo: {msg}', broadcast=False)
 
 if __name__ == '__main__':

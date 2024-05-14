@@ -24,7 +24,6 @@ def open_pdf_button(pdf_path):
     # Example print to check if it works
     with open('Json Files/myfile.json', 'r') as file:
         data = json.load(file)
-
     print(json.dumps(data, indent=4))
 
 def pdf_ocr(pdf_path):

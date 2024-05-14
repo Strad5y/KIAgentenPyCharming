@@ -63,4 +63,3 @@ def save_text_as_json(text, json_file_path):
 #pdf_path = "PDF Example Files/Estimation of the Gross Fixed Kapital using linear Regression.pdf"
 #open_pdf_button(pdf_path)
 
-

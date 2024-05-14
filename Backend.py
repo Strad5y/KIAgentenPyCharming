@@ -1,17 +1,19 @@
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
+from flask_cors import CORS
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+CORS(app, supports_credentials=True)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @socketio.on('message')
-def handle_message(msg):
-    # Echos die erhaltene Nachricht zur�ck an den Absender
-    emit('message', f'Echo: {msg}', broadcast=False)
+def handle_message(message):
+    print('Received message:', message)
+    socketio.send('Echo: ' + message)  # Echo the received message
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

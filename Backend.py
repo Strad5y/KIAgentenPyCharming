@@ -1,21 +1,27 @@
 from flask import Flask, render_template
+<<<<<<< HEAD
 from flask_socketio import SocketIO, emit
 import json
 import fitz
 
+from flask_socketio import SocketIO
+from flask_cors import CORS
+
 app = Flask(__name__)
-socketio = SocketIO(app)
+CORS(app, supports_credentials=True)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @socketio.on('message')
-def handle_message(msg):
-    # Echos die erhaltene Nachricht zur�ck an den Absender
-    emit('message', f'Echo: {msg}', broadcast=False)
+def handle_message(message):
+    print('Received message:', message)
+    socketio.send('Echo: ' + message)  # Echo the received message
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
 
 
@@ -62,5 +68,6 @@ def save_text_as_json(text, json_file_path):
 # Example usage
 #pdf_path = "PDF Example Files/Estimation of the Gross Fixed Kapital using linear Regression.pdf"
 #open_pdf_button(pdf_path)
+
 
 

@@ -1,100 +1,102 @@
-const socket = io(); // Verbindet mit dem Socket.IO-Server
+document.addEventListener("DOMContentLoaded", function() {
+  const socket = io.connect('https://kiagentenpycharming.cloud/');
 
-function typeMessage(fullText, type) {
-  let index = 0;
-  let container = document.getElementById('chat-messages');
-  let messageDiv = document.createElement('div');
-  messageDiv.classList.add('chat-message', type);
+  const messageContainer = document.getElementById('chat-messages');
+  const inputElement = document.getElementById('chat-input');
+  const sendButton = document.getElementById('chat-send');
 
-  const profilePicUrl = type === 'incoming' ?
-                        document.getElementById('chat-container').getAttribute('data-profile-pic-url') :
-                        "/static/images/User_1.png";
+  // Funktion zum Anzeigen von Nachrichten mit Typisierungseffekt
+  function typeMessage(fullText, type) {
+      let index = 0;
+      let messageDiv = document.createElement('div');
+      messageDiv.classList.add('chat-message', type);
 
-  messageDiv.innerHTML = `
-    <img src="${profilePicUrl}" class="profile-pic">
-    <span class="sender-name">${type === 'incoming' ? 'Chat-bot' : 'Du'}</span>
-  `;
-  const textSpan = document.createElement('span');
-  textSpan.classList.add('message-text');
-  messageDiv.appendChild(textSpan);
-  container.appendChild(messageDiv);
+      // Füge das Profilbild nur zu eingehenden Nachrichten hinzu
+      if (type === 'incoming') {
+          messageDiv.innerHTML = `
+            <img src="static/images/Chat-bot-profilbild.jpg" class="profile-pic">
+            <span class="sender-name">FunkBot</span>
+          `;
+          const textSpan = document.createElement('span');
+          textSpan.classList.add('message-text');
+          messageDiv.appendChild(textSpan);
+          messageContainer.appendChild(messageDiv);
 
-  function typeStep() {
-    if (index < fullText.length) {
-      textSpan.textContent += fullText[index++];
-      setTimeout(typeStep, 20);
-    }
+          // Tippeffekt für die Nachricht
+          function typeStep() {
+              if (index < fullText.length) {
+                  textSpan.textContent += fullText[index++];
+                  setTimeout(typeStep, 20);
+              }
+          }
+          typeStep();
+      } else {
+          messageDiv.innerHTML = `
+            <img src="static/images/User_1.png" class="profile-pic">
+            <span class="sender-name">Du</span>
+            <span class="message-text">${fullText}</span>
+          `;
+          messageContainer.appendChild(messageDiv);
+      }
+      messageContainer.scrollTop = messageContainer.scrollHeight;
   }
-  typeStep();
-}
 
-function displayMessage(text, type) {
-  var messagesContainer = document.getElementById('chat-messages');
-  var messageDiv = document.createElement('div');
-  messageDiv.classList.add('chat-message', type);
-
-  const profilePicUrl = type === 'incoming' ?
-                        document.getElementById('chat-container').getAttribute('data-profile-pic-url') :
-                        "/static/images/User_1.png";
-
-  messageDiv.innerHTML = `
-    <img src="${profilePicUrl}" class="profile-pic">
-    <span class="sender-name">${type === 'incoming' ? 'Chat-bot' : 'Du'}</span>
-    <span class="message-text">${text}</span>
-  `;
-  messagesContainer.appendChild(messageDiv);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
-socket.on('message', function(msg) {
-  displayMessage(msg, 'incoming'); // Verwendet displayMessage für sofortiges Anzeigen
-});
-
-function sendMessage(message) {
-  if (message.trim() !== '') {
-    socket.emit('message', message); // Sendet die Nachricht an den Server
-    displayMessage(message, 'outgoing'); // Zeigt die Nachricht sofort im UI als ausgehende Nachricht
+  // Funktion zum Senden einer Nachricht
+  function sendMessage() {
+      const message = inputElement.value;
+      if (message.trim().length > 0) {
+          socket.emit('message', message);
+          typeMessage(message, 'outgoing'); // Verwende typeMessage für ausgehende Nachrichten
+          inputElement.value = '';
+      }
   }
-}
 
-function checkForEnter(event) {
-  if (event.keyCode === 13) {
-    event.preventDefault(); // Verhindert einen Zeilenumbruch
-    sendMessage(event.target.value);
-    event.target.value = ''; // Nachrichtenfeld leeren
-  }
-}
-
-function adjustInputHeight() {
-  const input = document.getElementById('chat-input');
-  input.style.height = '42px'; // Setzt die Höhe auf ein Minimum
-  if (input.scrollHeight > input.clientHeight) {
-    input.style.height = input.scrollHeight + 'px'; // Passt die Höhe an den Inhalt an
-  }
-}
-
-function addQuickReplies(options) {
-  const container = document.getElementById('chat-messages');
-  const repliesDiv = document.createElement('div');
-  repliesDiv.classList.add('quick-replies');
-
-  options.forEach(option => {
-    const button = document.createElement('button');
-    button.textContent = option.label;
-    button.onclick = function() { sendMessage(option.message); };
-    repliesDiv.appendChild(button);
+  // Nachrichten vom Server empfangen
+  socket.on('message', function(msg) {
+      typeMessage(msg, 'incoming'); // Verwende typeMessage für eingehende Nachrichten
   });
 
-  container.appendChild(repliesDiv);
-}
+  sendButton.addEventListener('click', sendMessage);
 
-document.getElementById('chat-input').addEventListener('input', adjustInputHeight);
-document.getElementById('chat-send').addEventListener('click', function() {
-  sendMessage(document.getElementById('chat-input').value);
-  document.getElementById('chat-input').value = ''; // Nachrichtenfeld leeren
+  inputElement.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+          sendMessage();
+          event.preventDefault();
+      }
+  });
+
+  // Eventuell kannst du hier eine Logik hinzufügen, um "Schnelle Antworten" zu implementieren
+  function addQuickReplies(options) {
+      const container = document.getElementById('chat-messages');
+      const repliesDiv = document.createElement('div');
+      repliesDiv.classList.add('quick-replies');
+  
+      options.forEach(option => {
+          const button = document.createElement('button');
+          button.textContent = option.label;
+          button.onclick = function() { sendMessage(option.message); };
+          repliesDiv.appendChild(button);
+      });
+  
+      container.appendChild(repliesDiv);
+  }
+
+    // Funktion zur Anpassung der Eingabefeldhöhe
+  function adjustInputHeight() {
+     const input = document.getElementById('chat-input');
+    // Setzt die Höhe zurück, um eine korrekte Schrumpfung zu ermöglichen
+    input.style.height = '42px'; // Setze auf die gewünschte Mindesthöhe
+    if (input.scrollHeight > input.clientHeight) {
+        input.style.height = input.scrollHeight + 'px';
+    }
+  }
+
+  document.getElementById('chat-input').addEventListener('input', adjustInputHeight);
+  adjustInputHeight(); // Stelle sicher, dass diese Funktion nach der Definition aufgerufen wird, um die Höhe beim Laden der Seite anzupassen
+
+
+  // Zeige eine Begrüßungsnachricht beim Laden der Seite an
+  setTimeout(function() {
+      typeMessage("Hallo, wie kann ich dir heute helfen?", 'incoming');
+  }, 1500);
 });
-document.getElementById('chat-input').addEventListener('keypress', checkForEnter);
-
-setTimeout(function() {
-  displayMessage("Hallo, wie kann ich dir heute helfen?", 'incoming');
-}, 1500);

@@ -1,5 +1,24 @@
-import fitz
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
 import json
+import fitz
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@socketio.on('message')
+def handle_message(msg):
+    # Echos die erhaltene Nachricht zur�ck an den Absender
+    emit('message', f'Echo: {msg}', broadcast=False)
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+
+
 def open_pdf_button(pdf_path):
     text = pdf_ocr(pdf_path)
     json_file_path = "Json Files/myfile.json"
@@ -41,5 +60,6 @@ def save_text_as_json(text, json_file_path):
 
 
 # Example usage
-pdf_path = "PDF Example Files/Estimation of the Gross Fixed Kapital using linear Regression.pdf"
-open_pdf_button(pdf_path)
+#pdf_path = "PDF Example Files/Estimation of the Gross Fixed Kapital using linear Regression.pdf"
+#open_pdf_button(pdf_path)
+

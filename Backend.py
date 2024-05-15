@@ -56,3 +56,5 @@ def save_text_as_json(text, json_file_path):
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+
+#open_pdf_button("Pdf Files/Pfannkuchen Grundrezept.pdf")

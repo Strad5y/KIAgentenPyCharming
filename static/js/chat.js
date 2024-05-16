@@ -1,8 +1,23 @@
 document.addEventListener("DOMContentLoaded", function() {
-    const socket = io.connect('https://kiagentenpycharming.cloud', {
-        transports: ['websocket', 'polling'],
-        upgrade: false
-    });
+    let socket;
+
+    function connectSocket() {
+        socket = io.connect('https://kiagentenpycharming.cloud', {
+            transports: ['websocket', 'polling'],
+            upgrade: false
+        });
+
+        socket.on('message', function(msg) {
+            typeMessage(msg, 'incoming');
+        });
+
+        socket.on('connect_error', function() {
+            console.error('WebSocket connection failed. Retrying...');
+            setTimeout(connectSocket, 2000); // Reconnect after 2 seconds
+        });
+    }
+
+    connectSocket();
 
     const messageContainer = document.getElementById('chat-messages');
     const inputElement = document.getElementById('chat-input');
@@ -52,10 +67,6 @@ document.addEventListener("DOMContentLoaded", function() {
             inputElement.value = '';
         }
     }
-
-    socket.on('message', function(msg) {
-        typeMessage(msg, 'incoming');
-    });
 
     sendButton.addEventListener('click', sendMessage);
 

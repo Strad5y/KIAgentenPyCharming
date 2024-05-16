@@ -1,12 +1,21 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 import json
 import fitz  # PyMuPDF
 from flask_cors import CORS
+import requests
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Load environment variables from .env file
+load_dotenv()
+API_KEY = os.getenv('API_KEY')
+API_URL = 'https://chat-ai.academiccloud.de/v1/chat/completions'
+MODEL = 'intel-neural-chat-7b'
 
 @app.route('/')
 def index():
@@ -15,7 +24,25 @@ def index():
 @socketio.on('message')
 def handle_message(message):
     print('Received message:', message)
-    socketio.send('Echo: ' + message)  # Echo the received message
+    response = get_llm_response(message)
+    socketio.send(response)
+
+def get_llm_response(message):
+    headers = {
+        'Authorization': f'Bearer {API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        'model': MODEL,
+        'messages': [
+            {'role': 'system', 'content': 'You are a helpful assistant.'},
+            {'role': 'user', 'content': message}
+        ],
+        'temperature': 0.7
+    }
+    response = requests.post(API_URL, headers=headers, json=data)
+    response_json = response.json()
+    return response_json['choices'][0]['message']['content']
 
 def open_pdf_button(pdf_path):
     text = pdf_ocr(pdf_path)
@@ -56,5 +83,3 @@ def save_text_as_json(text, json_file_path):
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)
-
-#open_pdf_button("Pdf Files/Pfannkuchen Grundrezept.pdf")

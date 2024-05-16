@@ -25,7 +25,7 @@ def index():
 def handle_message(data):
     message = data.get('text')
     model = data.get('model', DEFAULT_MODEL)  # Use the model from the message or the default
-    print(f'Received message: {message} using model: {model}')
+    print(f'Received message: "{message}" using model: {model}')  # Debugging
     response = get_llm_response(message, model)
     socketio.send(response)
 
@@ -42,8 +42,10 @@ def get_llm_response(message, model):
         ],
         'temperature': 0.7
     }
+    print(f'Sending request with model: {model}')  # Debugging
     response = requests.post(API_URL, headers=headers, json=data)
     response_json = response.json()
+    print(f'Received response: {response_json}')  # Debugging
     return response_json['choices'][0]['message']['content']
 
 def open_pdf_button(pdf_path):

@@ -3,16 +3,18 @@ document.addEventListener("DOMContentLoaded", function() {
         transports: ['websocket', 'polling'],
         upgrade: false
     });
-  
+
     const messageContainer = document.getElementById('chat-messages');
     const inputElement = document.getElementById('chat-input');
     const sendButton = document.getElementById('chat-send');
-  
+
+    let selectedModel = 'intel-neural-chat-7b';  // Default model
+
     function typeMessage(fullText, type) {
         let index = 0;
         let messageDiv = document.createElement('div');
         messageDiv.classList.add('chat-message', type);
-  
+
         if (type === 'incoming') {
             messageDiv.innerHTML = `
               <img src="static/images/Chat-bot-profilbild.jpg" class="profile-pic">
@@ -22,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
             textSpan.classList.add('message-text');
             messageDiv.appendChild(textSpan);
             messageContainer.appendChild(messageDiv);
-  
+
             function typeStep() {
                 if (index < fullText.length) {
                     textSpan.textContent += fullText[index++];
@@ -40,29 +42,29 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         messageContainer.scrollTop = messageContainer.scrollHeight;
     }
-  
+
     function sendMessage() {
         const message = inputElement.value;
         if (message.trim().length > 0) {
-            socket.emit('message', message);
+            socket.emit('message', { text: message, model: selectedModel });
             typeMessage(message, 'outgoing');
             inputElement.value = '';
         }
     }
-  
+
     socket.on('message', function(msg) {
         typeMessage(msg, 'incoming');
     });
-  
+
     sendButton.addEventListener('click', sendMessage);
-  
+
     inputElement.addEventListener('keypress', function(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
             sendMessage();
             event.preventDefault();
         }
     });
-  
+
     function adjustInputHeight() {
        const input = document.getElementById('chat-input');
       input.style.height = '42px';
@@ -70,11 +72,19 @@ document.addEventListener("DOMContentLoaded", function() {
           input.style.height = input.scrollHeight + 'px';
       }
     }
-  
+
     document.getElementById('chat-input').addEventListener('input', adjustInputHeight);
     adjustInputHeight();
-  
+
     setTimeout(function() {
         typeMessage("Hallo, wie kann ich dir heute helfen?", 'incoming');
     }, 1500);
+
+    // Event listener for model selection
+    document.querySelectorAll('.dropdown-content a').forEach(item => {
+        item.addEventListener('click', event => {
+            selectedModel = event.target.getAttribute('data-model');
+            alert(`Modell gewechselt zu: ${selectedModel}`);
+        });
+    });
 });

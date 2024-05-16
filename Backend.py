@@ -15,25 +15,27 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 load_dotenv()
 API_KEY = os.getenv('API_KEY')
 API_URL = 'https://chat-ai.academiccloud.de/v1/chat/completions'
-MODEL = 'intel-neural-chat-7b'
+DEFAULT_MODEL = 'intel-neural-chat-7b'
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @socketio.on('message')
-def handle_message(message):
-    print('Received message:', message)
-    response = get_llm_response(message)
+def handle_message(data):
+    message = data.get('text')
+    model = data.get('model', DEFAULT_MODEL)  # Use the model from the message or the default
+    print(f'Received message: {message} using model: {model}')
+    response = get_llm_response(message, model)
     socketio.send(response)
 
-def get_llm_response(message):
+def get_llm_response(message, model):
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
     data = {
-        'model': MODEL,
+        'model': model,
         'messages': [
             {'role': 'system', 'content': 'You are a helpful assistant.'},
             {'role': 'user', 'content': message}

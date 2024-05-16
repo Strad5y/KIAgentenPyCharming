@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         socket.on('connect_error', function() {
             console.error('WebSocket connection failed. Retrying...');
-            setTimeout(connectSocket, 2000); // Reconnect after 2 seconds
+            setTimeout(connectSocket, 5000); // Reconnect after 5 seconds
         });
     }
 
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function sendMessage() {
         const message = inputElement.value;
         if (message.trim().length > 0) {
-            console.log(`Sending message: "${message}" with model: ${selectedModel}`); // Debugging
+            console.log(`Sending message: "${message}" with model: ${selectedModel}`);
             socket.emit('message', { text: message, model: selectedModel });
             typeMessage(message, 'outgoing');
             inputElement.value = '';
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.dropdown-content a').forEach(item => {
         item.addEventListener('click', event => {
             selectedModel = event.target.getAttribute('data-model');
-            console.log(`Selected model: ${selectedModel}`); // Debugging
+            console.log(`Selected model: ${selectedModel}`);
             alert(`Modell gewechselt zu: ${selectedModel}`);
         });
     });

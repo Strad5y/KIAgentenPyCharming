@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 import json
 import fitz  # PyMuPDF
@@ -6,13 +6,10 @@ from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
 import os
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-UPLOAD_FOLDER = 'PDF Files'
 
 # Load environment variables from .env file
 load_dotenv()
@@ -51,30 +48,8 @@ def get_llm_response(message, model):
     print(f'Received response: {response_json}')
     return response_json['choices'][0]['message']['content']
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    file = request.files['file']
-    if file:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
-        open_pdf_button(filepath)
-        return {'path': '/uploads/' + filename}, 200
-    else:
-        return 'No file uploaded', 400
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
-
 def open_pdf_button(pdf_path):
-    #save the pdf
-    new_path = os.path.join("PDF Files", os.path.basename(pdf_path))
-    os.rename(pdf_path, new_path)
-    #text recognition from pdf
-    text = pdf_ocr(new_path)
-    #save the text as json
+    text = pdf_ocr(pdf_path)
     json_file_path = "Json Files/myfile.json"
     save_text_as_json(text, json_file_path)
     # Example print to check if it works
@@ -109,5 +84,6 @@ def save_text_as_json(text, json_file_path):
     # Write the dictionary to a JSON file
     with open(json_file_path, 'w') as json_file:
         json.dump(data, json_file)
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False)

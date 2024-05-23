@@ -7,6 +7,9 @@ dist/
 # Environment variables
 .env
 
+#Das virtual environment sollte nicht comited werden
+/venv/
+.venv/
 
 
 #Webhook for the Raspberry Pi 

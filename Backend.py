@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import json
 import fitz  # PyMuPDF
@@ -15,19 +15,28 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 load_dotenv()
 API_KEY = os.getenv('API_KEY')
 API_URL = 'https://chat-ai.academiccloud.de/v1/chat/completions'
-DEFAULT_MODEL = 'intel-neural-chat-7b'
+MODEL = 'intel-neural-chat-7b'
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@socketio.on('message')
-def handle_message(data):
+@app.route('/set_model', methods=['POST'])
+def set_model():
+    global MODEL
+    data = request.json
+    new_model = data.get('model')
+    if new_model:
+        MODEL = new_model
+        return jsonify({'status': 'success', 'model': MODEL})
+    return jsonify({'status': 'error', 'message': 'No model specified'})
+
+@app.route('/message', methods=['POST'])
+def handle_message():
+    data = request.json
     message = data.get('text')
-    model = data.get('model', DEFAULT_MODEL)  # Use the model from the message or the default
-    print(f'Received message: "{message}" using model: {model}')
-    response = get_llm_response(message, model)
-    socketio.send(response)
+    response = get_llm_response(message, MODEL)
+    return jsonify({'response': response})
 
 def get_llm_response(message, model):
     headers = {
@@ -42,10 +51,8 @@ def get_llm_response(message, model):
         ],
         'temperature': 0.7
     }
-    print(f'Sending request with model: {model}')
     response = requests.post(API_URL, headers=headers, json=data)
     response_json = response.json()
-    print(f'Received response: {response_json}')
     return response_json['choices'][0]['message']['content']
 
 def open_pdf_button(pdf_path):

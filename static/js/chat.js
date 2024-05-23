@@ -1,29 +1,9 @@
 document.addEventListener("DOMContentLoaded", function() {
-    let socket;
-
-    function connectSocket() {
-        socket = io.connect('https://kiagentenpycharming.cloud', {
-            transports: ['websocket', 'polling'],
-            upgrade: false
-        });
-
-        socket.on('message', function(msg) {
-            typeMessage(msg, 'incoming');
-        });
-
-        socket.on('connect_error', function() {
-            console.error('WebSocket connection failed. Retrying...');
-            setTimeout(connectSocket, 5000); // Reconnect after 5 seconds
-        });
-    }
-
-    connectSocket();
+    let selectedModel = 'intel-neural-chat-7b';  // Default model
 
     const messageContainer = document.getElementById('chat-messages');
     const inputElement = document.getElementById('chat-input');
     const sendButton = document.getElementById('chat-send');
-
-    let selectedModel = 'intel-neural-chat-7b';  // Default model
 
     function typeMessage(fullText, type) {
         let index = 0;
@@ -62,7 +42,20 @@ document.addEventListener("DOMContentLoaded", function() {
         const message = inputElement.value;
         if (message.trim().length > 0) {
             console.log(`Sending message: "${message}" with model: ${selectedModel}`);
-            socket.emit('message', { text: message, model: selectedModel });
+            fetch('/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                typeMessage(data.response, 'incoming');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
             typeMessage(message, 'outgoing');
             inputElement.value = '';
         }
@@ -98,6 +91,22 @@ document.addEventListener("DOMContentLoaded", function() {
             selectedModel = event.target.getAttribute('data-model');
             console.log(`Selected model: ${selectedModel}`);
             alert(`Modell gewechselt zu: ${selectedModel}`);
+
+            // Send a request to change the model on the server
+            fetch('/set_model', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ model: selectedModel }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(`Server response: ${data.status}, model: ${data.model}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
         });
     });
 });

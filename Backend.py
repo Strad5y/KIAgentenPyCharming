@@ -52,6 +52,7 @@ def get_llm_response(message, model):
     return response_json['choices'][0]['message']['content']
 
 
+# saves uploaded pdf file
 @app.route('/upload', methods=['POST'])
 def upload_file():
     file = request.files['file']
@@ -67,6 +68,8 @@ def upload_file():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
+
+
 def open_pdf_button(pdf_path):
     #save the pdf
     new_path = os.path.join("PDF Files", os.path.basename(pdf_path))
@@ -79,11 +82,12 @@ def open_pdf_button(pdf_path):
 
     #hier kommt der call hin das JSOn Datei mit prompt ans llm gesendet wird.
 
-    # Example print to check if it works
+    # Example print the text to check if it works
     with open('Json Files/myfile.json', 'r') as file:
         data = json.load(file)
     print(json.dumps(data, indent=4))
 
+#text recengnition from pdf
 def pdf_ocr(pdf_path):
     # Open the PDF
     pdf_document = fitz.open(pdf_path)
@@ -104,6 +108,7 @@ def pdf_ocr(pdf_path):
 
     return text
 
+# OCR returns a text file so this saves the text as JSON
 def save_text_as_json(text, json_file_path):
     # Create a dictionary to store the text
     data = {'text': text}

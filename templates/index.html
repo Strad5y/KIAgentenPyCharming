@@ -31,6 +31,7 @@
 </div>
 
 <div class="button-container">
+    <button id="remove-pdf" style="display: none;">Remove PDF</button>
     <button id="downloadButton">Download JSON</button>
     <div class="dropdown">
         <button class="dropbtn">Chat-GPT Version auswählen</button>
@@ -58,6 +59,60 @@
         element.click();
         document.body.removeChild(element);
     });
+        document.getElementById('remove-pdf').addEventListener('click', function() {
+        // Clear the content of the new-box div
+        var pdfContainer = document.getElementById('new-box');
+        pdfContainer.innerHTML = '';
+
+       var pdfContainer = document.getElementById('new-box');
+    pdfContainer.innerHTML = `
+        <div class="upload-btn-wrapper">
+           <label for="myfile">Choose a file:</label>
+            <input type="file" id="myfile" name="myfile"/>
+        </div>
+    `;
+
+        // Hide the remove button
+
+        var removeButton = document.getElementById('remove-pdf');
+         removeButton.style.display = 'none';
+    });
+document.getElementById('new-box').addEventListener('change', function(event) {
+    console.log('Change event triggered');
+    if (event.target.id !== 'myfile') return;  // Only run if the event target is the file input
+    console.log('File input changed');
+    var file = event.target.files[0];  // Use event.target instead of this
+    var formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    }).then(response => response.json())
+      .then(data => {
+        if (data.path) {
+            var pdfContainer = document.getElementById('new-box');
+            pdfContainer.innerHTML = ''; // Clear existing content
+
+            var pdfFrame = document.createElement('iframe');
+            pdfFrame.id = 'pdfFrame';
+            pdfFrame.src = data.path; // Set the source of the iframe to the uploaded PDF file
+            pdfFrame.style.width = '100%';
+            pdfFrame.style.height = '600px'; // Adjust height as needed
+            pdfContainer.appendChild(pdfFrame);
+
+            // Show the remove button
+            var removeButton = document.getElementById('remove-pdf');
+            removeButton.style.display = 'block';
+
+
+        } else {
+            console.error('File upload failed');
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+    });
+});
 </script>
 </body>
 </html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>PDF-Chat-Anwendung - Startseite</title>
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    {% include 'partials/_header.html' %}
+    <div class="container mt-5">
+        <div id="landing-page" class="text-center">
+            <h1 class="display-4">Willkommen bei der PDF-Chat-Anwendung</h1>
+            <p class="lead">Bitte lade ein PDF hoch, um zu beginnen, oder fahre mit der Chat-Oberfläche fort.</p>
+            <input type="file" id="pdf-upload" class="form-control-file mb-4" aria-label="PDF hochladen" accept="application/pdf">
+            <br>
+            <button id="proceed-button" class="btn btn-primary disabled" disabled>Zum Chat</button>
+        </div>
+    </div>
+    {% include 'partials/_footer.html' %}
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+</body>
+</html>

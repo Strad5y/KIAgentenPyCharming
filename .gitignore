@@ -1,0 +1,28 @@
+# Node modules
+node_modules/
+
+# Distribution files
+dist/
+
+# Environment variables in th config file
+.env
+
+#Webhook for the Raspberry Pi 
+webhook.py
+
+# IDE-specific files
+.vscode/
+.idea/
+*.sublime-workspace
+.venv
+venv
+.lib
+lib
+
+
+# Log files
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db

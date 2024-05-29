@@ -1,0 +1,62 @@
+#chat-window {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    height: 400px;
+    overflow-y: scroll;
+}
+
+#chat-input-container {
+    display: flex;
+    align-items: center;
+}
+
+#chat-input {
+    flex: 1;
+    margin-right: 10px;
+}
+
+#send-button {
+    border: none;
+    background: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #007bff;
+}
+
+.message {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.bot-message {
+    justify-content: flex-start;
+}
+
+.profile-pic {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.message div {
+    display: inline-block;
+    max-width: calc(100% - 50px);
+    word-wrap: break-word;
+}
+
+.user-message div::before {
+    content: "Du: ";
+    font-weight: bold;
+}
+
+.bot-message div::before {
+    content: "FunkBot: ";
+    font-weight: bold;
+}

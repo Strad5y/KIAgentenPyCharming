@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF-Chat-Anwendung - Chat</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/chat.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    {% include 'partials/_header.html' %}
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Chatfenster</h2>
+                <div id="chat-window" class="border p-4 bg-white" style="height: 400px; overflow-y: scroll;"></div>
+                <div id="chat-input-container" class="mt-2">
+                    <input type="text" id="chat-input" class="form-control" placeholder="Tippe deine Nachricht hier...">
+                    <button id="send-button">&#x27A4;</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h2>PDF-Anzeige</h2>
+                <div id="pdf-display" class="border p-4 bg-white" style="height: 400px; overflow-y: scroll;" data-pdf-text="{{ pdf_text|safe }}"></div>
+            </div>
+        </div>
+    </div>
+    {% include 'partials/_footer.html' %}
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>

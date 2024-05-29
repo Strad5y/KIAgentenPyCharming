@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <title>PDF Chat Application</title>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <a class="navbar-brand" href="#">PyCharming</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('home_route') }}">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('chat_route') }}">FunkBot</a>
+            </li>
+        </ul>
+        {% if request.endpoint == 'chat_route' %}
+        <form class="form-inline my-2 my-lg-0 ml-auto">
+            <select id="model-select" class="form-control mr-sm-2" aria-label="Select model" title="Select model">
+                <option value="intel-neural-chat-7b">intel-neural-chat-7b</option>
+                <option value="mixtral-8x7b-instruct">mixtral-8x7b-instruct</option>
+                <option value="qwen1.5-72b-chat">qwen1.5-72b-chat</option>
+                <option value="meta-llama-3-70b-instruct">meta-llama-3-70b-instruct</option>
+            </select>
+        </form>
+        {% endif %}
+    </div>
+</nav>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

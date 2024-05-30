@@ -1,11 +1,11 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
-from gunicorn.app.base import BaseApplication
 from dotenv import load_dotenv
 import requests
 import PyPDF2
+import json
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -20,11 +20,16 @@ API_KEY = os.getenv('API_KEY')
 BASE_URL = os.getenv('BASE_URL')
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
+OUTPUT_FOLDER = 'output'
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+if not os.path.exists(OUTPUT_FOLDER):
+    os.makedirs(OUTPUT_FOLDER)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -77,10 +82,15 @@ def chat_api():
     }
 
     response = requests.post(f"{BASE_URL}/chat/completions", headers=headers, json=data)
-    logger.info(f"API response: {response.json()}")
-    return jsonify(response.json())
+    response_data = response.json()
 
+    # Speichere die Antwort in einer JSON-Datei
+    output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'last_response.json')
+    with open(output_file, 'w') as f:
+        json.dump(response_data, f)
 
+    logger.info(f"API response: {response_data}")
+    return jsonify(response_data)
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -95,26 +105,11 @@ def upload_file():
         return jsonify({"filename": filename, "text": text})
     return jsonify({"error": "Invalid file format"}), 400
 
-class StandaloneApplication(BaseApplication):
-    def __init__(self, app, options=None):
-        self.application = app
-        self.options = options or {}
-        super().__init__()
-
-    def load_config(self):
-        # Apply configuration to Gunicorn
-        for key, value in self.options.items():
-            if key in self.cfg.settings and value is not None:
-                self.cfg.set(key.lower(), value)
-
-    def load(self):
-        return self.application
+@app.route("/download-json", methods=["GET"])
+def download_json():
+    output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'last_response.json')
+    return send_file(output_file, as_attachment=True)
 
 if __name__ == "__main__":
-    options = {
-        "bind": "0.0.0.0:5004",
-        "workers": 4,
-        "loglevel": "info",
-        "accesslog": "-"
-    }
-    StandaloneApplication(app, options).run()
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5004)

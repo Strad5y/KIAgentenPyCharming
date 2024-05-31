@@ -35,6 +35,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def pdf_to_text(pdf_path):
+    # wird geupdated zu ocr. Aber in und output format bleiben identisch
     text = ""
     with open(pdf_path, 'rb') as pdf_file:
         reader = PyPDF2.PdfReader(pdf_file)
@@ -102,6 +103,9 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         text = pdf_to_text(filepath)
+
+        #hier methode zum spliten und abspeichern callen(text)
+
         return jsonify({"filename": filename, "text": text})
     return jsonify({"error": "Invalid file format"}), 400
 

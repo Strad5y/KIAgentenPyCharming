@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import requests
 import PyPDF2
 import json
+from langchain_text_splitters import RecursiveJsonSplitter
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -64,13 +66,17 @@ def uploaded_file(filename):
 def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "intel-neural-chat-7b")
+
+    #hier mit usser message splits der usser message retrieven
     pdf_text = request.json.get("pdf_text", "")
 
+
+    # check if there are is any old resonses.
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
-
+    # add old respones to the prompt.
     prompt = f"Das folgende PDF wurde hochgeladen:\n\n{pdf_text}\n\nFrage: {user_message}"
 
     data = {
@@ -103,6 +109,14 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         text = pdf_to_text(filepath)
+
+        print(text)
+
+
+        json_text = json.dumps({"text": text})
+        splitter = RecursiveJsonSplitter(max_chunk_size=200)
+        all_splits = splitter.split_json(json_data=json_text)
+        print(all_splits)
 
         #hier methode zum spliten und abspeichern callen(text)
 

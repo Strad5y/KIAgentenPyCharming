@@ -110,13 +110,12 @@ def upload_file():
         file.save(filepath)
         text = pdf_to_text(filepath)
 
-        print(text)
-
-
         json_text = json.dumps({"text": text})
-        splitter = RecursiveJsonSplitter(max_chunk_size=200)
-        all_splits = splitter.split_json(json_data=json_text)
-        print(all_splits)
+        json_data = json.loads(json_text)
+        print(json_data)
+        splitter = RecursiveJsonSplitter(max_chunk_size=20)
+        all_splits = splitter.split_text(json_data=json_data)
+        print(all_splits[0])
 
         #hier methode zum spliten und abspeichern callen(text)
 

@@ -1,12 +1,15 @@
 import os
 import logging
+import pickle
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import requests
 import PyPDF2
 import json
-from langchain_text_splitters import RecursiveJsonSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 
 
 # Setup logging
@@ -66,9 +69,10 @@ def uploaded_file(filename):
 def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "intel-neural-chat-7b")
+    vector_store = load_vector_store('vector_store.pkl')
+    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+    retrieved_docs = retriever.invoke(user_message)
 
-    #hier mit usser message splits der usser message retrieven
-    pdf_text = request.json.get("pdf_text", "")
 
 
     # check if there are is any old resonses.
@@ -77,7 +81,7 @@ def chat_api():
         'Content-Type': 'application/json'
     }
     # add old respones to the prompt.
-    prompt = f"Das folgende PDF wurde hochgeladen:\n\n{pdf_text}\n\nFrage: {user_message}"
+    prompt = f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\nFrage: {user_message}"
 
     data = {
         "model": model,
@@ -109,16 +113,9 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         text = pdf_to_text(filepath)
-
-        json_text = json.dumps({"text": text})
-        json_data = json.loads(json_text)
-        print(json_data)
-        splitter = RecursiveJsonSplitter(max_chunk_size=20)
-        all_splits = splitter.split_text(json_data=json_data)
-        print(all_splits[0])
-
-        #hier methode zum spliten und abspeichern callen(text)
-
+        chunks = chunk_processing(text)
+        vector_store = embeddings(chunks)
+        save_vector_store(vector_store, 'vector_store.pkl')
         return jsonify({"filename": filename, "text": text})
     return jsonify({"error": "Invalid file format"}), 400
 
@@ -126,6 +123,40 @@ def upload_file():
 def download_json():
     output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'last_response.json')
     return send_file(output_file, as_attachment=True)
+
+
+def chunk_processing(text):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=300,
+        chunk_overlap=50,
+        length_function=len
+    )
+    chunks = text_splitter.split_text(text=text)
+    return chunks
+def embeddings(chunks):
+    """
+    Create embeddings for text chunks using local embeddings.
+    """
+    embeddings_model_name = "sentence-transformers/all-MiniLM-L6-v2"
+    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
+    # Wrap FAISS index with vector store
+    vector_store = FAISS.from_texts(chunks, embedding=embeddings)
+    return vector_store
+
+def save_vector_store(vector_store, filename):
+    directory = 'vectorStore'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    filepath = os.path.join(directory, filename)
+    with open(filepath, 'wb') as f:
+        pickle.dump(vector_store, f)
+
+def load_vector_store(filename):
+    directory = 'vectorStore'
+    filepath = os.path.join(directory, filename)
+    with open(filepath, 'rb') as f:
+        return pickle.load(f)
+
 
 if __name__ == "__main__":
     from waitress import serve

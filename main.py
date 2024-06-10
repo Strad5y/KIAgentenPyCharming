@@ -127,7 +127,7 @@ def download_json():
 
 def chunk_processing(text):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
+        chunk_size=200,
         chunk_overlap=50,
         length_function=len
     )

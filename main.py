@@ -69,7 +69,9 @@ def uploaded_file(filename):
 def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "intel-neural-chat-7b")
+    #loads the pdf text stored in vektor store
     vector_store = load_vector_store('vector_store.pkl')
+    #retrive only the relevant chunks
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
     retrieved_docs = retriever.invoke(user_message)
 

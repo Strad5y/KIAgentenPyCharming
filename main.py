@@ -74,7 +74,6 @@ def chat_api():
     retrieved_docs = retriever.invoke(user_message)
 
 
-
     # check if there are is any old resonses.
     headers = {
         'Authorization': f'Bearer {API_KEY}',
@@ -109,12 +108,16 @@ def upload_file():
         return jsonify({"error": "No file part in the request"}), 400
     file = request.files['file']
     if file and allowed_file(file.filename):
+        #save pdf in filepath
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+        #convert pdf to text
         text = pdf_to_text(filepath)
+        #chunk text and create embeddings
         chunks = chunk_processing(text)
         vector_store = embeddings(chunks)
+        #save the vektor store
         save_vector_store(vector_store, 'vector_store.pkl')
         return jsonify({"filename": filename, "text": text})
     return jsonify({"error": "Invalid file format"}), 400

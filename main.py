@@ -1,12 +1,13 @@
+import re
+import PyPDF2
+import requests
 import os
+import json
 import logging
 import pickle
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-import requests
-import PyPDF2
-import json
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -46,10 +47,16 @@ def pdf_to_text(pdf_path):
         reader = PyPDF2.PdfReader(pdf_file)
         for page_num in range(len(reader.pages)):
             text += reader.pages[page_num].extract_text() + "\n"
-    print("Extracted PDF Text:\n", text)  # Debugging-Zeile hinzufügen
+    print("Extracted PDF Text:\n", text)
     return text
 
-import re
+
+def clean_text(text):
+    clean_text = re.sub(r'\\u\w{4}', ' ', text)
+    clean_text = re.sub(r'\s+', ' ', clean_text)
+    return clean_text.strip()
+
+
 def extract_key_values(pdf_text, pdf_filename):
     key_values = {
         "name": pdf_filename,
@@ -69,18 +76,18 @@ def extract_key_values(pdf_text, pdf_filename):
             r"Electric\s*Vehicles:\s*(\d+)",
             r"Count\s*of\s*Electric\s*Vehicles:\s*(\d+)"
         ]),
-        "Impact": extract_section(pdf_text, ["Climate Impact", "Impact"],
-                                  ["Potential Risks and Benefits", "Risks and Opportunities"]),
-        "Risks": extract_section(pdf_text, ["Climate Risks", "Risks"], ["Climate Opportunities", "Opportunities"]),
-        "Opportunities": extract_section(pdf_text, ["Climate Opportunities", "Opportunities"],
-                                         ["Corporate Strategy and Initiatives", "Strategy"]),
-        "Strategy": extract_section(pdf_text, ["Business Strategy", "Strategy"],
-                                    ["Sustainability Initiatives", "Actions"]),
-        "Actions": extract_section(pdf_text, ["Sustainability Initiatives", "Actions"],
-                                   ["Policies and Goals", "Policies"]),
+        "Impact": extract_section(pdf_text, ["Risks, opportunities and impacts", "Impact"],
+                                  ["Uniform codes and standards worldwide", "Uniform standards"]),
+        "Risks": extract_section(pdf_text, ["Risk assessment and due diligence", "Risk management"],
+                                 ["Sustainability management", "Prevention tool"]),
+        "Opportunities": extract_section(pdf_text, ["Risk assessment and due diligence", "Risk management"],
+                                         ["Sustainability management", "Prevention tool"]),
+        "Strategy": extract_section(pdf_text, ["Sustainability strategy", "Strategy"],
+                                    ["TARGETS AND AMBITIONS", "RELEVANT TOPICS"]),
+        "Actions": extract_section(pdf_text, ["Sustainability management", "Actions"], ["Policies and Goals", "Goals"]),
         "Adopted_policies": extract_section(pdf_text, ["Implemented Policies", "Adopted Policies"],
                                             ["Sustainability Goals", "Targets"]),
-        "Targets": extract_section(pdf_text, ["Sustainability Goals", "Targets"], [r"Page\s*\d+", "End of document"])
+        "Targets": extract_section(pdf_text, ["TARGETS AND AMBITIONS", "Targets"], [r"Page\s*\d+", "End of document"])
     }
 
     for key, value in key_values.items():
@@ -106,10 +113,35 @@ def extract_section(text, start_markers, end_markers):
             for end_marker in end_markers:
                 end = text.find(end_marker, start)
                 if end != -1:
-                    return text[start:end].strip()
-            return text[start:].strip()
+                    return clean_text(text[start:end].strip())
+            return clean_text(text[start:].strip())
     logger.warning(f"None of the start markers '{start_markers}' found.")
     return None
+
+
+def generation2(pdf_text, vector_store_filename, api_key, base_url):
+    vector_store = load_vector_store(vector_store_filename)
+    retriever = vector_store.as_retriever()
+
+    prompt = f'''Bitte extrahiere die folgenden Informationen aus dem PDF und gib sie im JSON-Format zurück: CO2-Emissionen, NOX-Emissionen, Anzahl der Elektrofahrzeuge, Auswirkungen, Risiken, Chancen, Strategie, Maßnahmen, verabschiedete Richtlinien, Ziele.\n\n{pdf_text}'''
+
+    response = requests.post(
+        f"{base_url}/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"model": "intel-neural-chat-7b", "prompt": prompt, "max_tokens": 500}
+    )
+
+    if response.status_code != 200:
+        logger.error(f"API request failed with status code {response.status_code}")
+        return None
+
+    try:
+        result = response.json()
+    except requests.exceptions.JSONDecodeError as e:
+        logger.error(f"Failed to decode JSON response: {e}")
+        return None
+
+    return result
 
 
 @app.route("/")
@@ -136,18 +168,15 @@ def uploaded_file(filename):
 def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "intel-neural-chat-7b")
-    # loads the pdf text stored in vektor store
     vector_store = load_vector_store('vector_store.pkl')
-    # retrive only the relevant chunks
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
     retrieved_docs = retriever.invoke(user_message)
 
-    # check if there are is any old resonses.
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
-    # add old respones to the prompt.
+
     prompt = f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\nFrage: {user_message}"
 
     data = {
@@ -162,7 +191,6 @@ def chat_api():
     response = requests.post(f"{BASE_URL}/chat/completions", headers=headers, json=data)
     response_data = response.json()
 
-    # Speichere die Antwort in einer JSON-Datei
     output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'last_response.json')
     with open(output_file, 'w') as f:
         json.dump(response_data, f)
@@ -184,7 +212,8 @@ def upload_file():
         chunks = chunk_processing(text)
         vector_store = embeddings(chunks)
         save_vector_store(vector_store, 'vector_store.pkl')
-        return jsonify({"filename": filename, "text": text})
+        additional_info = generation2(text, 'vector_store.pkl', API_KEY, BASE_URL)
+        return jsonify({"filename": filename, "text": text, "additional_info": additional_info})
     return jsonify({"error": "Invalid file format"}), 400
 
 
@@ -210,7 +239,6 @@ def download_json():
     return send_file(output_file, as_attachment=True)
 
 
-
 def chunk_processing(text):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=200,
@@ -222,12 +250,8 @@ def chunk_processing(text):
 
 
 def embeddings(chunks):
-    """
-    Create embeddings for text chunks using local embeddings.
-    """
     embeddings_model_name = "sentence-transformers/all-MiniLM-L6-v2"
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-    # Wrap FAISS index with vector store
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     return vector_store
 

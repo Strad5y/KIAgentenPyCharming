@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const pdfUpload = document.getElementById('pdf-upload');
     const proceedButton = document.getElementById('proceed-button');
 
-    // Deactivate the button initially
     proceedButton.disabled = true;
     proceedButton.classList.add('disabled');
 
@@ -16,11 +15,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.filename) {
-                    proceedButton.dataset.filename = data.filename;  // Store the filename in the button's dataset
-                    proceedButton.disabled = false;  // Enable the button
+                    proceedButton.dataset.filename = data.filename;
+                    proceedButton.disabled = false;
                     proceedButton.classList.remove('disabled');
                     proceedButton.classList.add('shake-animation');
                     setTimeout(() => {

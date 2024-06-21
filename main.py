@@ -11,7 +11,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,21 +35,87 @@ if not os.path.exists(UPLOAD_FOLDER):
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def pdf_to_text(pdf_path):
-    # wird geupdated zu ocr. Aber in und output format bleiben identisch
     text = ""
     with open(pdf_path, 'rb') as pdf_file:
         reader = PyPDF2.PdfReader(pdf_file)
         for page_num in range(len(reader.pages)):
-            text += reader.pages[page_num].extract_text()
+            text += reader.pages[page_num].extract_text() + "\n"
+    print("Extracted PDF Text:\n", text)  # Debugging-Zeile hinzufügen
     return text
+
+import re
+def extract_key_values(pdf_text, pdf_filename):
+    key_values = {
+        "name": pdf_filename,
+        "CO2": extract_value(pdf_text, [
+            r"CO2\s*Emissions?:\s*([\d,\.]+)",
+            r"CO2\s*in\s*t/annum:\s*([\d,\.]+)",
+            r"CO2\s*emissions?\s*is\s*([\d,\.]+)"
+        ]),
+        "NOX": extract_value(pdf_text, [
+            r"NOX\s*Emissions?:\s*([\d,\.]+)",
+            r"NOX\s*in\s*t/annum:\s*([\d,\.]+)",
+            r"NOX\s*emissions?\s*is\s*([\d,\.]+)"
+        ]),
+        "Number_of_Electric_Vehicles": extract_value(pdf_text, [
+            r"Total\s*Electric\s*Vehicles:\s*(\d+)",
+            r"Number\s*of\s*Electric\s*Vehicles:\s*(\d+)",
+            r"Electric\s*Vehicles:\s*(\d+)",
+            r"Count\s*of\s*Electric\s*Vehicles:\s*(\d+)"
+        ]),
+        "Impact": extract_section(pdf_text, ["Climate Impact", "Impact"],
+                                  ["Potential Risks and Benefits", "Risks and Opportunities"]),
+        "Risks": extract_section(pdf_text, ["Climate Risks", "Risks"], ["Climate Opportunities", "Opportunities"]),
+        "Opportunities": extract_section(pdf_text, ["Climate Opportunities", "Opportunities"],
+                                         ["Corporate Strategy and Initiatives", "Strategy"]),
+        "Strategy": extract_section(pdf_text, ["Business Strategy", "Strategy"],
+                                    ["Sustainability Initiatives", "Actions"]),
+        "Actions": extract_section(pdf_text, ["Sustainability Initiatives", "Actions"],
+                                   ["Policies and Goals", "Policies"]),
+        "Adopted_policies": extract_section(pdf_text, ["Implemented Policies", "Adopted Policies"],
+                                            ["Sustainability Goals", "Targets"]),
+        "Targets": extract_section(pdf_text, ["Sustainability Goals", "Targets"], [r"Page\s*\d+", "End of document"])
+    }
+
+    for key, value in key_values.items():
+        if value is None:
+            logger.warning(f"Value for {key} not found in the document.")
+
+    return key_values
+
+
+def extract_value(text, patterns):
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return None
+
+
+def extract_section(text, start_markers, end_markers):
+    for start_marker in start_markers:
+        start = text.find(start_marker)
+        if start != -1:
+            start += len(start_marker)
+            for end_marker in end_markers:
+                end = text.find(end_marker, start)
+                if end != -1:
+                    return text[start:end].strip()
+            return text[start:].strip()
+    logger.warning(f"None of the start markers '{start_markers}' found.")
+    return None
+
 
 @app.route("/")
 def home_route():
     return render_template("home.html")
+
 
 @app.route("/chat")
 def chat_route():
@@ -61,20 +126,21 @@ def chat_route():
         pdf_text = pdf_to_text(pdf_path)
     return render_template("chat.html", pdf_filename=pdf_filename, pdf_text=pdf_text)
 
+
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 
 @app.route("/api/chat", methods=["POST"])
 def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "intel-neural-chat-7b")
-    #loads the pdf text stored in vektor store
+    # loads the pdf text stored in vektor store
     vector_store = load_vector_store('vector_store.pkl')
-    #retrive only the relevant chunks
+    # retrive only the relevant chunks
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
     retrieved_docs = retriever.invoke(user_message)
-
 
     # check if there are is any old resonses.
     headers = {
@@ -104,30 +170,45 @@ def chat_api():
     logger.info(f"API response: {response_data}")
     return jsonify(response_data)
 
+
 @app.route("/upload", methods=["POST"])
 def upload_file():
     if 'file' not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
     file = request.files['file']
     if file and allowed_file(file.filename):
-        #save pdf in filepath
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        #convert pdf to text
         text = pdf_to_text(filepath)
-        #chunk text and create embeddings
         chunks = chunk_processing(text)
         vector_store = embeddings(chunks)
-        #save the vektor store
         save_vector_store(vector_store, 'vector_store.pkl')
         return jsonify({"filename": filename, "text": text})
     return jsonify({"error": "Invalid file format"}), 400
 
+
 @app.route("/download-json", methods=["GET"])
 def download_json():
-    output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'last_response.json')
+    pdf_filename = request.args.get('pdf', None)
+    if not pdf_filename:
+        return jsonify({"error": "No PDF file specified"}), 400
+
+    pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_filename)
+    if not os.path.exists(pdf_path):
+        return jsonify({"error": "PDF file not found"}), 404
+
+    pdf_text = pdf_to_text(pdf_path)
+    key_values = extract_key_values(pdf_text, pdf_filename)
+
+    logger.info(f"Extracted Key Values: {key_values}")
+
+    output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'extracted_key_values.json')
+    with open(output_file, 'w') as f:
+        json.dump(key_values, f, indent=4)
+
     return send_file(output_file, as_attachment=True)
+
 
 
 def chunk_processing(text):
@@ -138,6 +219,8 @@ def chunk_processing(text):
     )
     chunks = text_splitter.split_text(text=text)
     return chunks
+
+
 def embeddings(chunks):
     """
     Create embeddings for text chunks using local embeddings.
@@ -148,6 +231,7 @@ def embeddings(chunks):
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     return vector_store
 
+
 def save_vector_store(vector_store, filename):
     directory = 'vectorStore'
     if not os.path.exists(directory):
@@ -155,6 +239,7 @@ def save_vector_store(vector_store, filename):
     filepath = os.path.join(directory, filename)
     with open(filepath, 'wb') as f:
         pickle.dump(vector_store, f)
+
 
 def load_vector_store(filename):
     directory = 'vectorStore'
@@ -165,4 +250,5 @@ def load_vector_store(filename):
 
 if __name__ == "__main__":
     from waitress import serve
+
     serve(app, host="127.0.0.1", port=5004)

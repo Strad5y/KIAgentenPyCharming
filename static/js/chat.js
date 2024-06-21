@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButton = document.getElementById('send-button');
     const chatInput = document.getElementById('chat-input');
     const chatWindow = document.getElementById('chat-window');
+    const modelSelect = document.getElementById('model-select');
     const pdfDisplay = document.getElementById('pdf-display');
 
     const greetings = [
@@ -22,20 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfDisplay.innerHTML = '';
         pdfDisplay.appendChild(iframe);
 
+        // Zufälligen Begrüßungstext auswählen
         const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
         const botMessageElement = document.createElement('div');
         botMessageElement.classList.add('message', 'bot-message');
-        botMessageElement.innerHTML = `<div>${randomGreeting}</div>`;
+        botMessageElement.innerHTML = `<img src="/static/images/Chat-bot-profilbild.jpg" alt="Bot" class="profile-pic"> <div>${randomGreeting}</div>`;
         chatWindow.appendChild(botMessageElement);
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
     const sendMessage = async () => {
         const message = chatInput.value;
+        const model = modelSelect.value;
         if (message.trim() !== '') {
             const messageElement = document.createElement('div');
             messageElement.classList.add('message', 'user-message');
-            messageElement.innerHTML = `<div>${message}</div>`;
+            messageElement.innerHTML = `<img src="/static/images/User_1.png" alt="User" class="profile-pic"> <div>${message}</div>`;
             chatWindow.appendChild(messageElement);
             chatInput.value = '';
             chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -45,14 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ message: message, pdf_text: pdfText })
+                body: JSON.stringify({ message: message, model: model, pdf_text: pdfText })
             });
             const data = await response.json();
             const botMessage = data.choices[0].message.content;
 
             const botMessageElement = document.createElement('div');
             botMessageElement.classList.add('message', 'bot-message');
-            botMessageElement.innerHTML = `<div>${botMessage}</div>`;
+            botMessageElement.innerHTML = `<img src="/static/images/Chat-bot-profilbild.jpg" alt="Bot" class="profile-pic"> <div>${botMessage}</div>`;
             chatWindow.appendChild(botMessageElement);
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }

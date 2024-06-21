@@ -46,9 +46,11 @@ def pdf_to_text(pdf_path):
     with open(pdf_path, 'rb') as pdf_file:
         reader = PyPDF2.PdfReader(pdf_file)
         for page_num in range(len(reader.pages)):
-            text += reader.pages[page_num].extract_text() + "\n"
-    print("Extracted PDF Text:\n", text)
+            page_text = reader.pages[page_num].extract_text()
+            if page_text:
+                text += page_text + "\n"
     return text
+
 
 
 def clean_text(text):

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const downloadButton = document.getElementById('download-button');
+    const downloadButton = document.getElementById('download-json-button');
 
     downloadButton.addEventListener('click', () => {
         const urlParams = new URLSearchParams(window.location.search);

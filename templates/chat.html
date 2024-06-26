@@ -18,11 +18,12 @@
                     <input type="text" id="chat-input" class="form-control" placeholder="Tippe deine Nachricht hier...">
                     <button id="send-button">&#x27A4;</button>
                 </div>
-                <button id="download-button" class="btn btn-primary mt-2">Download JSON</button>
+                <!-- Download JSON Button -->
+                <button id="download-json-button" class="btn btn-success mt-3">Download JSON</button>
             </div>
             <div class="col-md-6">
                 <h2>PDF-Anzeige</h2>
-                <div id="pdf-display" class="border p-4 bg-white" style="height: 400px; overflow-y: scroll;" data-pdf-text="{{ pdf_text|safe }}"></div>
+                <iframe src="{{ url_for('uploaded_file', filename=pdf_filename) }}" width="100%" height="400px"></iframe>
             </div>
         </div>
     </div>

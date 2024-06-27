@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const sendButton = document.getElementById('send-button');
+    const chatInput = document.getElementById('chat-input');
+    const chatWindow = document.getElementById('chat-window');
+    const modelSelect = document.getElementById('model-select');
+    const pdfDisplay = document.getElementById('pdf-display');
+
     const greetings = [
         "Hallo! Wie kann ich dir heute helfen?",
         "Willkommen! Stell mir eine Frage zu deinem PDF.",
@@ -9,9 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const pdfFilename = urlParams.get('pdf');
     const pdfText = pdfDisplay.dataset.pdfText;
-
-    const chatWindow = document.getElementById('chat-window');
-    const pdfDisplay = document.getElementById('pdf-display');
 
     if (pdfFilename) {
         const iframe = document.createElement('iframe');
@@ -29,74 +32,40 @@ document.addEventListener('DOMContentLoaded', () => {
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    const sendButton = document.getElementById('send-button');
-    const chatInput = document.getElementById('chat-input');
+    const sendMessage = async () => {
+        const message = chatInput.value;
+        const model = modelSelect.value;
+        if (message.trim() !== '') {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'user-message');
+            messageElement.innerHTML = `<img src="/static/images/User_1.png" alt="User" class="profile-pic"> <div>${message}</div>`;
+            chatWindow.appendChild(messageElement);
+            chatInput.value = '';
+            chatWindow.scrollTop = chatWindow.scrollHeight;
 
-    sendButton.addEventListener('click', () => {
-        const userMessage = chatInput.value.trim();
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: message, model: model, pdf_text: pdfText })
+            });
+            const data = await response.json();
+            const botMessage = data.choices[0].message.content;
 
-        if (userMessage === '') {
-            return;
-        }
-
-        const userMessageElement = document.createElement('div');
-        userMessageElement.classList.add('message', 'user-message');
-        userMessageElement.textContent = userMessage;
-        chatWindow.appendChild(userMessageElement);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-
-        // Clear input
-        chatInput.value = '';
-
-        // Simulate bot response after 1 second
-        setTimeout(() => {
-            const botResponse = 'Ich bin leider noch im Entwicklungsstadium und verstehe deine Frage nicht richtig. Kannst du sie anders formulieren?';
             const botMessageElement = document.createElement('div');
             botMessageElement.classList.add('message', 'bot-message');
-            botMessageElement.innerHTML = `<img src="/static/images/Chat-bot-profilbild.jpg" alt="Bot" class="profile-pic"> <div>${botResponse}</div>`;
+            botMessageElement.innerHTML = `<img src="/static/images/Chat-bot-profilbild.jpg" alt="Bot" class="profile-pic"> <div>${botMessage}</div>`;
             chatWindow.appendChild(botMessageElement);
             chatWindow.scrollTop = chatWindow.scrollHeight;
-        }, 1000);
-    });
+        }
+    };
 
-    const downloadJsonButton = document.getElementById('download-json-button');
-
-    downloadJsonButton.addEventListener('click', () => {
-        const data = {
-            model: 'intel-neural-chat-7b',
-            prompt: pdfText,
-            max_tokens: 500
-        };
-
-        fetch('/extract-key-values', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(jsonData => {
-            // Process the JSON data here
-            console.log('Received JSON data:', jsonData);
-            const jsonText = JSON.stringify(jsonData, null, 2);
-            const blob = new Blob([jsonText], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'extracted_data.json';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-        })
-        .catch(error => {
-            console.error('Error fetching JSON:', error);
-        });
+    sendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            sendMessage();
+        }
     });
 });

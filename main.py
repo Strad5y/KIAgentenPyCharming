@@ -165,11 +165,10 @@ def chat_route():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-
 @app.route("/api/chat", methods=["POST"])
 def chat_api():
     user_message = request.json.get("message")
-    model = request.json.get("model", "intel-neural-chat-7b")
+    model = request.json.get("model", "qwen1.5-72b-chat")
     vector_store = load_vector_store('vector_store.pkl')
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
     retrieved_docs = retriever.invoke(user_message)
@@ -178,8 +177,31 @@ def chat_api():
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
+    # if first prompt 1 if second prompt 2 else prompt 3
+    if os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt2.json')):
+        prompt_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')).read()
+        prompt_text2 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt2.json')).read()
+        response_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
+        response_text2 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
+        prompt = (
+            f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\n"
+            f"Unsere bishereige Konversation:\n\nFrage 1:{prompt_text2} Antwort 1: {response_text2}\n"
+            f"Frage 2:{prompt_text1} Antwort 2: {response_text1}\n"
+            f"beantworte mit all den bisher gegebenden Informationen diese Frage:{user_message}"
+        )
+    elif os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')):
+        prompt_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')).read()
+        response_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
+        prompt = (
+            f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\n"
+            f"Unsere bishereige Konversation:\n\nFrage 1:{prompt_text1} Antwort 1: {response_text1}\n"
+            f"beantworte mit all den bisher gegebenden Informationen diese Frage:{user_message}"
+        )
+    else:
+        prompt = f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\nFrage: {user_message}"
 
-    prompt = f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\nFrage: {user_message}"
+    print(prompt)
+    save_prompt([user_message])
 
     data = {
         "model": model,
@@ -193,13 +215,10 @@ def chat_api():
     response = requests.post(f"{BASE_URL}/chat/completions", headers=headers, json=data)
     response_data = response.json()
 
-    output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'last_response.json')
-    with open(output_file, 'w') as f:
-        json.dump(response_data, f)
+    save_response(response_data)
 
     logger.info(f"API response: {response_data}")
     return jsonify(response_data)
-
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -207,6 +226,8 @@ def upload_file():
         return jsonify({"error": "No file part in the request"}), 400
     file = request.files['file']
     if file and allowed_file(file.filename):
+        delete_files_in_folder(app.config['UPLOAD_FOLDER'])
+        delete_files_in_folder(app.config['OUTPUT_FOLDER'])
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
@@ -272,6 +293,54 @@ def load_vector_store(filename):
     filepath = os.path.join(directory, filename)
     with open(filepath, 'rb') as f:
         return pickle.load(f)
+def save_response(response_data):
+    output_folder = app.config['OUTPUT_FOLDER']
+    response1_path = os.path.join(output_folder, 'response1.json')
+    response2_path = os.path.join(output_folder, 'response2.json')
+
+    if os.path.exists(response2_path):
+        # Delete response2 if it exists
+        os.remove(response2_path)
+
+    if os.path.exists(response1_path):
+        # Rename response1 to response2 if it exists
+        os.rename(response1_path, response2_path)
+
+    # Save new response as response1
+    with open(response1_path, 'w') as f:
+        json.dump(response_data, f)
+def save_prompt(prompt_data):
+    output_folder = app.config['OUTPUT_FOLDER']
+    prompt1_path = os.path.join(output_folder, 'prompt1.json')
+    prompt2_path = os.path.join(output_folder, 'prompt2.json')
+
+    if os.path.exists(prompt2_path):
+        # Delete response2 if it exists
+        os.remove(prompt2_path)
+
+    if os.path.exists(prompt1_path):
+        # Rename response1 to response2 if it exists
+        os.rename(prompt1_path, prompt2_path)
+
+    # Convert set to list before saving
+    prompt_data_list = list(prompt_data)
+
+    # Save new response as response1
+    with open(prompt1_path, 'w') as f:
+        json.dump(prompt_data_list, f)
+
+def delete_files_in_folder(folder_path):
+    try:
+        for filename in os.listdir(folder_path):
+            file_path = os.path.join(folder_path, filename)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+                print(f"Deleted file: {file_path}")
+            else:
+                print(f"Skipping non-file item: {file_path}")
+    except Exception as e:
+        print(f"Error: {e}")
+
 
 
 if __name__ == "__main__":

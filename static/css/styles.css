@@ -61,3 +61,22 @@
     50% { opacity: 1; }
     100% { opacity: 0; }
 }
+
+#chunk-size {
+    /* Hintergrundfarbe */
+    background-color: #4CAF50;
+    /* Textfarbe */
+    color: white;
+    /* Schriftgröße */
+    font-size: 16px;
+    /* Padding */
+    padding: 10px 24px;
+    /* Rand */
+    border: none;
+    /* Cursor */
+    cursor: pointer;
+    /* Rundung */
+    border-radius: 5px;
+    /* Textausrichtung */
+    text-align: center;
+}

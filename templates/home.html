@@ -20,5 +20,14 @@
     </div>
     {% include 'partials/_footer.html' %}
     <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+<div class="form-group">
+    <label for="chunk-size">Wählen Sie die Chunk-Größe:</label>
+    <select class="form-control" id="chunk-size">
+        <option value="200">200</option>
+        <option value="300">300</option>
+        <option value="400">400</option>
+        <option value="500">500</option>
+    </select>
+</div>
 </body>
 </html>

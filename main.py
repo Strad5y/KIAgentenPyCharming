@@ -170,6 +170,10 @@ def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "qwen1.5-72b-chat")
     vector_store = load_vector_store('vector_store.pkl')
+    #doesnt work right now, will fix it in net version
+    #chunk_amount = request.form.get('chunk_amount')
+    #chunk_a = int(chunk_amount);
+    #print(chunk_a)
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
     retrieved_docs = retriever.invoke(user_message)
 
@@ -226,13 +230,15 @@ def upload_file():
         return jsonify({"error": "No file part in the request"}), 400
     file = request.files['file']
     if file and allowed_file(file.filename):
+        chunk_size = int(request.form.get('chunk_size'))
+        print(chunk_size)
         delete_files_in_folder(app.config['UPLOAD_FOLDER'])
         delete_files_in_folder(app.config['OUTPUT_FOLDER'])
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         text = pdf_to_text(filepath)
-        chunks = chunk_processing(text)
+        chunks = chunk_processing(text,chunk_size)
         vector_store = embeddings(chunks)
         save_vector_store(vector_store, 'vector_store.pkl')
         additional_info = generation2(text, 'vector_store.pkl', API_KEY, BASE_URL)
@@ -262,9 +268,9 @@ def download_json():
     return send_file(output_file, as_attachment=True)
 
 
-def chunk_processing(text):
+def chunk_processing(text,chunk_s):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=200,
+        chunk_size=chunk_s,
         chunk_overlap=50,
         length_function=len
     )

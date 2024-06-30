@@ -170,8 +170,6 @@ def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "qwen1.5-72b-chat")
     vector_store = load_vector_store('vector_store.pkl')
-    chunk_amount = determine_chunk_amount(chunk_size)
-    print(chunk_amount)
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": chunk_amount})
     retrieved_docs = retriever.invoke(user_message)
 
@@ -228,8 +226,9 @@ def upload_file():
         return jsonify({"error": "No file part in the request"}), 400
     file = request.files['file']
     if file and allowed_file(file.filename):
-        global chunk_size
+        global chunk_size, chunk_amount
         chunk_size = int(request.form.get('chunk_size'))
+        chunk_amount = determine_chunk_amount(chunk_size)
         print(chunk_size)
         delete_files_in_folder(app.config['UPLOAD_FOLDER'])
         delete_files_in_folder(app.config['OUTPUT_FOLDER'])

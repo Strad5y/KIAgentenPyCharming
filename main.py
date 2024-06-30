@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +43,16 @@ if not os.path.exists(OUTPUT_FOLDER):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def validate_pdf(file_path):
+    try:
+        with open(file_path, 'rb') as pdf_file:
+            reader = PyPDF2.PdfReader(pdf_file)
+            if len(reader.pages) > 0:
+                return True
+    except Exception as e:
+        logger.error(f"File validation error: {e}")
+        return False
+    return False
 
 def pdf_to_text(pdf_path):
     text = ""
@@ -52,98 +65,93 @@ def pdf_to_text(pdf_path):
     return text
 
 
-
 def clean_text(text):
     clean_text = re.sub(r'\\u\w{4}', ' ', text)
     clean_text = re.sub(r'\s+', ' ', clean_text)
     return clean_text.strip()
 
-
-def extract_key_values(pdf_text, pdf_filename):
-    key_values = {
-        "name": pdf_filename,
-        "CO2": extract_value(pdf_text, [
-            r"CO2\s*Emissions?:\s*([\d,\.]+)",
-            r"CO2\s*in\s*t/annum:\s*([\d,\.]+)",
-            r"CO2\s*emissions?\s*is\s*([\d,\.]+)"
-        ]),
-        "NOX": extract_value(pdf_text, [
-            r"NOX\s*Emissions?:\s*([\d,\.]+)",
-            r"NOX\s*in\s*t/annum:\s*([\d,\.]+)",
-            r"NOX\s*emissions?\s*is\s*([\d,\.]+)"
-        ]),
-        "Number_of_Electric_Vehicles": extract_value(pdf_text, [
-            r"Total\s*Electric\s*Vehicles:\s*(\d+)",
-            r"Number\s*of\s*Electric\s*Vehicles:\s*(\d+)",
-            r"Electric\s*Vehicles:\s*(\d+)",
-            r"Count\s*of\s*Electric\s*Vehicles:\s*(\d+)"
-        ]),
-        "Impact": extract_section(pdf_text, ["Risks, opportunities and impacts", "Impact"],
-                                  ["Uniform codes and standards worldwide", "Uniform standards"]),
-        "Risks": extract_section(pdf_text, ["Risk assessment and due diligence", "Risk management"],
-                                 ["Sustainability management", "Prevention tool"]),
-        "Opportunities": extract_section(pdf_text, ["Risk assessment and due diligence", "Risk management"],
-                                         ["Sustainability management", "Prevention tool"]),
-        "Strategy": extract_section(pdf_text, ["Sustainability strategy", "Strategy"],
-                                    ["TARGETS AND AMBITIONS", "RELEVANT TOPICS"]),
-        "Actions": extract_section(pdf_text, ["Sustainability management", "Actions"], ["Policies and Goals", "Goals"]),
-        "Adopted_policies": extract_section(pdf_text, ["Implemented Policies", "Adopted Policies"],
-                                            ["Sustainability Goals", "Targets"]),
-        "Targets": extract_section(pdf_text, ["TARGETS AND AMBITIONS", "Targets"], [r"Page\s*\d+", "End of document"])
-    }
-
-    for key, value in key_values.items():
-        if value is None:
-            logger.warning(f"Value for {key} not found in the document.")
-
-    return key_values
-
-
-def extract_value(text, patterns):
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1)
-    return None
-
-
-def extract_section(text, start_markers, end_markers):
-    for start_marker in start_markers:
-        start = text.find(start_marker)
-        if start != -1:
-            start += len(start_marker)
-            for end_marker in end_markers:
-                end = text.find(end_marker, start)
-                if end != -1:
-                    return clean_text(text[start:end].strip())
-            return clean_text(text[start:].strip())
-    logger.warning(f"None of the start markers '{start_markers}' found.")
-    return None
-
-
-def generation2(pdf_text, vector_store_filename, api_key, base_url):
-    vector_store = load_vector_store(vector_store_filename)
-    retriever = vector_store.as_retriever()
-
-    prompt = f'''Bitte extrahiere die folgenden Informationen aus dem PDF und gib sie im JSON-Format zurück: CO2-Emissionen, NOX-Emissionen, Anzahl der Elektrofahrzeuge, Auswirkungen, Risiken, Chancen, Strategie, Maßnahmen, verabschiedete Richtlinien, Ziele.\n\n{pdf_text}'''
-
-    response = requests.post(
-        f"{base_url}/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={"model": "intel-neural-chat-7b", "prompt": prompt, "max_tokens": 500}
+def requests_retry_session(
+    retries=5,
+    backoff_factor=1,
+    status_forcelist=(500, 502, 504),
+    session=None,
+):
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
     )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
-    if response.status_code != 200:
-        logger.error(f"API request failed with status code {response.status_code}")
-        return None
 
-    try:
-        result = response.json()
-    except requests.exceptions.JSONDecodeError as e:
-        logger.error(f"Failed to decode JSON response: {e}")
-        return None
 
+from langchain_community.llms import OpenAI
+from langchain.chains import RetrievalQA
+
+
+def process_chunk(chunk, qa):
+    prompt = f"""
+    Extract the following key values from the PDF and format them as a JSON object:
+    {{
+        "CO2 in t/annum": "",
+        "NOX in t/annum": "",
+        "Number of Electric Vehicles": "",
+        "Impact": "",
+        "Risks": "",
+        "Opportunities": "",
+        "Strategy": "",
+        "Actions": "",
+        "Adopted policies": "",
+        "Targets": ""
+    }}
+
+    PDF Content:
+    {chunk}
+    """
+    result = qa.run({"query": prompt})
     return result
+
+
+def generation2(VectorStore, query):
+    # Erstellen eines Retrievers aus dem VectorStore
+    retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": 10})  # Adjust k as needed
+
+    # Initialisieren des Modells
+    try:
+        model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
+    except Exception as e:
+        logger.error(f"Error initializing model: {e}")
+        return {"error": "Model initialization failed"}
+
+    # Initialisieren von RetrievalQA mit dem Modell und dem Retriever
+    qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False,
+                                     verbose=True)
+
+    # Relevante Chunks abrufen
+    relevant_chunks = retriever.get_relevant_documents(query)
+
+    all_results = []
+    for chunk in relevant_chunks:
+        try:
+            result = process_chunk(chunk.page_content, qa)  # Assuming chunk has a page_content attribute
+            all_results.append(result)
+        except Exception as e:
+            logger.error(f"Error processing chunk: {e}")
+
+    # Aggregating results
+    aggregated_result = aggregate_results(all_results)
+    return aggregated_result
+
+
+def aggregate_results(results):
+    aggregated = {"results": results}
+    return aggregated
 
 
 @app.route("/")
@@ -224,26 +232,51 @@ def chat_api():
     logger.info(f"API response: {response_data}")
     return jsonify(response_data)
 
+
+def save_chunks(chunks, filename):
+    chunk_file = os.path.join(app.config['OUTPUT_FOLDER'], f"{filename}_chunks.pkl")
+    with open(chunk_file, 'wb') as f:
+        pickle.dump(chunks, f)
+
 @app.route("/upload", methods=["POST"])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
-    file = request.files['file']
-    if file and allowed_file(file.filename):
-        chunk_size = int(request.form.get('chunk_size'))
-        print(chunk_size)
-        delete_files_in_folder(app.config['UPLOAD_FOLDER'])
-        delete_files_in_folder(app.config['OUTPUT_FOLDER'])
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        text = pdf_to_text(filepath)
-        chunks = chunk_processing(text,chunk_size)
-        vector_store = embeddings(chunks)
-        save_vector_store(vector_store, 'vector_store.pkl')
-        additional_info = generation2(text, 'vector_store.pkl', API_KEY, BASE_URL)
-        return jsonify({"filename": filename, "text": text, "additional_info": additional_info})
-    return jsonify({"error": "Invalid file format"}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part in the request"}), 400
+        file = request.files['file']
+        if file and allowed_file(file.filename):
+            chunk_size = int(request.form.get('chunk_size'))
+            logger.info(f"Chunk size: {chunk_size}")
+            delete_files_in_folder(app.config['UPLOAD_FOLDER'])
+            delete_files_in_folder(app.config['OUTPUT_FOLDER'])
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            if not os.path.exists(filepath):
+                logger.error("File not saved properly")
+                return jsonify({"error": "File not saved properly"}), 500
+
+            logger.info("File saved successfully")
+
+            if not validate_pdf(filepath):
+                logger.error("Invalid or corrupted PDF file")
+                return jsonify({"error": "Invalid or corrupted PDF file"}), 400
+
+            text = pdf_to_text(filepath)
+            chunks = chunk_processing(text, chunk_size)
+            save_chunks(chunks, filename)
+            vector_store = embeddings(chunks)
+            save_vector_store(vector_store, 'vector_store.pkl')
+
+            return jsonify({"filename": filename, "text": text})
+        return jsonify({"error": "Invalid file format"}), 400
+    except Exception as e:
+        logger.error(f"Exception during file upload: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+
 
 
 @app.route("/download-json", methods=["GET"])
@@ -257,15 +290,20 @@ def download_json():
         return jsonify({"error": "PDF file not found"}), 404
 
     pdf_text = pdf_to_text(pdf_path)
-    key_values = extract_key_values(pdf_text, pdf_filename)
+    vector_store = load_vector_store('vector_store.pkl')  # Laden des VectorStore
 
-    logger.info(f"Extracted Key Values: {key_values}")
+    result = generation2(vector_store, pdf_text)
+
+    if "error" in result:
+        logger.error(f"Failed to extract key values: {result['error']}")
+        return jsonify(result), 500
 
     output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'extracted_key_values.json')
     with open(output_file, 'w') as f:
-        json.dump(key_values, f, indent=4)
+        json.dump(result, f, indent=4)
 
     return send_file(output_file, as_attachment=True)
+
 
 
 def chunk_processing(text,chunk_s):

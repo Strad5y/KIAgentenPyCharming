@@ -57,9 +57,12 @@ def pdf_to_text(pdf_path):
     with open(pdf_path, 'rb') as pdf_file:
         reader = PyPDF2.PdfReader(pdf_file)
         for page_num in range(len(reader.pages)):
-            page_text = reader.pages[page_num].extract_text()
-            if page_text:
-                text += page_text + "\n"
+            try:
+                page_text = reader.pages[page_num].extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            except Exception as e:
+                logger.error(f"Error extracting text from page {page_num}: {e}")
     return text
 
 def clean_text(text):
@@ -89,86 +92,57 @@ def requests_retry_session(
 from langchain_community.llms import OpenAI
 from langchain.chains import RetrievalQA
 
-def process_chunk(chunk, qa):
-    prompt = f"""
-    Extract the following key values from the PDF and format them strictly as a JSON object:
-    {{
-        "CO2 in t/annum": "",
-        "NOX in t/annum": "",
-        "Number of Electric Vehicles": "",
-        "Impact": "Negative impact on climate change from a company's activities that the company addresses in the report.",
-        "Risks": "Material risks from impact on the climate change.",
-        "Opportunities": "Financial materiality from company's activities related to climate change.",
-        "Strategy": "Company's strategy and business model in line with the transition to a sustainable economy.",
-        "Actions": "Actions and resources in relation to material sustainability matters.",
-        "Adopted policies": "Policies adopted to manage material sustainability matters.",
-        "Targets": "Company's goals towards a sustainable economy."
-    }}
 
-    PDF Content:
-    {chunk}
-    """
-    result = qa.run({"query": prompt})
-    return result
+def generation2(VectorStore, query):
+    retriever = VectorStore.as_retriever()
+    model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
+    qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False,
+                                     verbose=True)
 
+    prompt = '''
+Extract the following key values from the provided PDF content and format them strictly as a JSON object. Ensure the JSON is valid, properly formatted, and includes all keys even if their values are empty. If certain values are not available, leave them as empty strings.
 
+{
+    "name": "NAME_OF_THE_DOC",
+    "CO2": "",
+    "NOX": "",
+    "Number_of_Electric_Vehicles": "",
+    "Impact": "",
+    "Risks": "",
+    "Opportunities": "",
+    "Strategy": "",
+    "Actions": "",
+    "Adopted_policies": "",
+    "Targets": ""
+}
 
+PDF Content:
+'''
 
-def generation2(VectorStore, query, pdf_filename):
-    retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
-
-    try:
-        model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
-    except Exception as e:
-        logger.error(f"Error initializing model: {e}")
-        return {"error": "Model initialization failed"}
-
-    qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False, verbose=True)
-
+    # Abrufen der relevanten Chunks
     relevant_chunks = retriever.get_relevant_documents(query)
     logger.info(f"Number of relevant chunks retrieved: {len(relevant_chunks)}")
 
-    all_results = []
-    complete_result = {
-        "CO2 in t/annum": None,
-        "NOX in t/annum": None,
-        "Number of Electric Vehicles": None,
-        "Impact": None,
-        "Risks": None,
-        "Opportunities": None,
-        "Strategy": None,
-        "Actions": None,
-        "Adopted policies": None,
-        "Targets": None
-    }
+    # Kombinieren der Texte der relevanten Chunks
+    pdf_content = "\n".join(chunk.page_content for chunk in relevant_chunks)
 
-    for chunk in relevant_chunks:
-        try:
-            result = process_chunk(chunk.page_content, qa)  # Assuming chunk has a page_content attribute
-            if isinstance(result, str):
-                try:
-                    result_json = json.loads(result)
-                    all_results.append(result_json)
-                    for key in complete_result.keys():
-                        if not complete_result[key] and result_json.get(key):
-                            complete_result[key] = result_json[key]
+    # Kombiniere den Prompt und den PDF-Inhalt
+    full_prompt = prompt + pdf_content
 
-                    if all(complete_result[key] for key in complete_result):
-                        break
-                except json.JSONDecodeError:
-                    logger.error(f"Error decoding JSON from result: {result}")
-        except Exception as e:
-            logger.error(f"Error processing chunk: {e}")
+    result = qa.run({"query": full_prompt})
 
-    final_result = {
-        "name": pdf_filename,
-        **{key: complete_result[key] if complete_result[key] is not None else "" for key in complete_result}
-    }
+    # Extrahiere den JSON-Teil der Antwort
+    json_start = result.find('{')
+    json_end = result.rfind('}') + 1
+    json_string = result[json_start:json_end]
 
-    return final_result
+    try:
+        json_data = json.loads(json_string)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {e}")
+        return {"error": "Invalid JSON format in response"}
 
-
-
+    return json_data
 
 
 @app.route("/")
@@ -295,7 +269,8 @@ def download_json():
         return jsonify({"error": "PDF file not found"}), 404
 
     vector_store = load_vector_store('vector_store.pkl')  # Laden des VectorStore
-    result = generation2(vector_store, pdf_path, pdf_filename)
+    query = "Extract key values from the PDF"  # Beispiel-Abfrage, anpassen falls notwendig
+    result = generation2(vector_store, query)  # Korrekte Aufruf von generation2
 
     if "error" in result:
         logger.error(f"Failed to extract key values: {result['error']}")
@@ -306,6 +281,9 @@ def download_json():
         json.dump(result, f, indent=4)
 
     return send_file(output_file, as_attachment=True)
+
+
+
 
 def chunk_processing(text,chunk_s):
     text_splitter = RecursiveCharacterTextSplitter(

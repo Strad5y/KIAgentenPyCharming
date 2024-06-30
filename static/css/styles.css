@@ -62,21 +62,22 @@
     100% { opacity: 0; }
 }
 
+
+
 #chunk-size {
-    /* Hintergrundfarbe */
-    background-color: #4CAF50;
-    /* Textfarbe */
-    color: white;
-    /* Schriftgröße */
-    font-size: 16px;
-    /* Padding */
+    background-color: #ededed;
+    color: #000000;
+    font-size: 14px;
     padding: 10px 24px;
-    /* Rand */
-    border: none;
-    /* Cursor */
+    border: 1px solid #757575;
     cursor: pointer;
-    /* Rundung */
     border-radius: 5px;
-    /* Textausrichtung */
     text-align: center;
+    height: 40px;
+    width: 132px;
+    margin-left: 85px;
+    margin-top: -110px;
+}
+#chunk-size:hover {
+    background-color: #e3e3e3;
 }
